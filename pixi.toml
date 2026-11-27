@@ -1,0 +1,89 @@
+[project]
+name = "neurovpr"
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+[system-requirements]
+cuda = "12.1"
+
+[dependencies]
+python = "3.12.*"
+cuda-version = "12.1.*"
+
+numpy = "*"
+numba = "*"
+scipy = "*"
+h5py = "*"
+matplotlib = "*"
+seaborn = "*"
+
+pytorch-gpu = "*"    # LENS baseline (lens_event_inference.py, LENS submodule)
+
+
+[pypi-dependencies]
+jax = { version = ">=0.5.0", extras = ["cuda12"] }   # STDP training (src/stdp_kernel.py)
+
+
+# ── Tasks ──────────────────────────────────────────────────────────────────────
+# `pixi task list` shows them all. Each dataset task trains our SNN (STDP), then
+# runs the Dense and Sparse SNN, SAD and LENS, writing one folder per method to
+# outputs/main_results/. Event data is read from $EVENT_LAB_DATASETS/<dataset>
+# (default ../Event-LAB/datasets/<dataset>).
+#
+# Every task except `synthetic` and `plots` measures latency: run one at a time on an
+# otherwise idle machine.
+
+[tasks.synthetic]
+description = "Quick end-to-end check of all four methods on generated frames (no download)"
+env = { DATASET_ARGS = "--event_dataset synthetic --num_images 200 --n_epochs 10" }
+cmd = """
+python train.py $DATASET_ARGS --output_path outputs/synthetic/stdp_synthetic &&
+python infer.py $DATASET_ARGS --checkpoint outputs/synthetic/stdp_synthetic --output_path outputs/synthetic/stdp_synthetic &&
+python sad_inference.py $DATASET_ARGS --output_path outputs/synthetic/sad_synthetic &&
+python lens_event_inference.py $DATASET_ARGS --output_path outputs/synthetic/lens_synthetic
+"""
+
+[tasks.qcr]
+description = "R@1 and latency of all four methods on QCR-Event (normal2 -> normal3, 100 ms windows)"
+env = { DATASET_ARGS = "--event_dataset qcr_event" }
+cmd = """
+python train.py $DATASET_ARGS --output_path outputs/main_results/stdp_qcr_event &&
+python infer.py $DATASET_ARGS --checkpoint outputs/main_results/stdp_qcr_event --output_path outputs/main_results/stdp_qcr_event &&
+python sad_inference.py $DATASET_ARGS --output_path outputs/main_results/sad_qcr_event &&
+python lens_event_inference.py $DATASET_ARGS --output_path outputs/main_results/lens_qcr_event
+"""
+
+[tasks.brisbane]
+description = "R@1 and latency of all four methods on Brisbane-Event (sunset1 -> sunset2, 1 s windows)"
+env = { DATASET_ARGS = "--event_dataset brisbane_event --window_size_ms 1000 --num_images -1 --event_query_num_images -1" }
+cmd = """
+python train.py $DATASET_ARGS --output_path outputs/main_results/stdp_brisbane_event &&
+python infer.py $DATASET_ARGS --checkpoint outputs/main_results/stdp_brisbane_event --output_path outputs/main_results/stdp_brisbane_event &&
+python sad_inference.py $DATASET_ARGS --output_path outputs/main_results/sad_brisbane_event &&
+python lens_event_inference.py $DATASET_ARGS --output_path outputs/main_results/lens_brisbane_event
+"""
+
+[tasks.nsavp]
+description = "R@1 and latency of all four methods on NSAVP (R0_FS0 -> R0_FA0, 1 s windows)"
+env = { DATASET_ARGS = "--event_dataset nsavp --window_size_ms 1000 --num_images -1 --event_query_num_images -1" }
+cmd = """
+python train.py $DATASET_ARGS --output_path outputs/main_results/stdp_nsavp &&
+python infer.py $DATASET_ARGS --checkpoint outputs/main_results/stdp_nsavp --output_path outputs/main_results/stdp_nsavp &&
+python sad_inference.py $DATASET_ARGS --output_path outputs/main_results/sad_nsavp &&
+python lens_event_inference.py $DATASET_ARGS --output_path outputs/main_results/lens_nsavp
+"""
+
+[tasks.stage-breakdown]
+description = "Per-stage latency of the Dense and Sparse SNN kernels on QCR-Event (run `qcr` first)"
+cmd = "python benchmarks/kernel_stage_breakdown.py --dataset qcr_event"
+
+[tasks.plots]
+description = "Comparison figures, latency-decomposition table and figures from the saved results (no timing)"
+cmd = """
+python plots/plot_main_comparison.py &&
+python plots/make_latency_decomposition_table.py --dataset qcr_event
+"""
+
+[tasks.all]
+description = "Every dataset task, then stage-breakdown, then plots"
+depends-on = ["qcr", "brisbane", "nsavp", "stage-breakdown", "plots"]
