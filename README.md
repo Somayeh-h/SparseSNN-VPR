@@ -101,9 +101,9 @@ Each query inference call is repeated 10 times (`--n_timing_repeats`). A query's
 
 so that `S_total = S_work * S_repr / (S_threads * S_gather)`. `benchmarks/kernel_stage_breakdown.py` further splits each SNN kernel into stages (call overhead, thread fork/join, accumulate, readout + argmax) by timing truncated copies of the fused kernel, so the stages add up to the real kernel time.
 
-## Citation
-
-If you use this code, please cite:
+## License and Citation
+This repository is licensed under the permissive [MIT License](./LICENSE).
+If you use our code, please cite our [paper](https://arxiv.org/abs/2610.16022):
 
 ```bibtex
 @article{hussaini2026removing,
