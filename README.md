@@ -19,7 +19,7 @@ This repository contains the four methods compared in the paper. All of them use
 ## Installation
 
 ```bash
-git clone --recursive <this repo>      # or, in an existing clone: git submodule update --init
+git clone --recursive https://github.com/Somayeh-h/SparseSNN-VPR.git     # or, in an existing clone: git submodule update --init
 cd neuromorphic_vpr
 pixi install                           # https://pixi.sh, Linux x86-64
 ```
